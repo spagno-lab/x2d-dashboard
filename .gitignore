@@ -1,0 +1,16 @@
+# Segreti - non committare mai
+.env
+.env.*
+!.env.tpl
+*secrets*.yaml
+go2rtc.yaml
+
+# Config locale con entity_id reali
+dashboard.local.yaml
+
+# OS / editor
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/

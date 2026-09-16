@@ -1,0 +1,46 @@
+##############################################################################
+# Tema "bambu_dark"
+# Va copiato in <config>/themes/bambu_dark.yaml
+# Vedi README.md per l'installazione completa.
+##############################################################################
+
+bambu_dark:
+  # --- Sfondi ---
+  primary-background-color: "#0f1114"
+  secondary-background-color: "#16191d"
+  card-background-color: "#1c2026"
+  ha-card-background: "#1c2026"
+  divider-color: "#2a2f36"
+
+  # --- Testo ---
+  primary-text-color: "#e8eaed"
+  secondary-text-color: "#9aa0a6"
+  text-primary-color: "#e8eaed"
+  disabled-text-color: "#5f6368"
+
+  # --- Accento (verde Bambu) ---
+  primary-color: "#00ae42"
+  accent-color: "#00ae42"
+  state-icon-color: "#e8eaed"
+  state-icon-active-color: "#00ae42"
+
+  # --- Card ---
+  ha-card-border-radius: "18px"
+  ha-card-border-width: "0"
+  ha-card-box-shadow: "0 2px 6px rgba(0,0,0,.45)"
+
+  # --- Barra superiore / sidebar ---
+  app-header-background-color: "#0f1114"
+  app-header-text-color: "#e8eaed"
+  sidebar-background-color: "#0f1114"
+  sidebar-text-color: "#9aa0a6"
+  sidebar-selected-text-color: "#00ae42"
+  sidebar-icon-color: "#9aa0a6"
+
+  # --- Grafici ---
+  graph-background: "#1c2026"
+
+  # --- Mushroom ---
+  mush-rgb-white: "232, 234, 237"
+  mush-card-primary-font-size: "14px"
+  mush-card-secondary-font-size: "12px"

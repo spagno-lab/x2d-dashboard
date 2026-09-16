@@ -1,0 +1,415 @@
+##############################################################################
+# Bambu Lab X2D - Home Assistant dashboard
+# https://github.com/spagno-lab/x2d-dashboard
+#
+# PRIMA DI USARLA: find & replace di questi 4 segnaposto con i TUOI valori.
+#
+#   MY_PRINTER      -> slug del device stampante   (es. x2d_spagno)
+#   MY_AMS1         -> slug del primo AMS          (es. ams_01)
+#   MY_AMS2         -> slug del secondo AMS        (es. ams_02)
+#   MY_SERIAL       -> prefisso bobine esterne     (es. x2d_00m09a123456789)
+#
+# Trova i tuoi valori con il template in docs/dump-entita.md
+#
+# DIPENDENZE HACS:
+#   piitaya/lovelace-mushroom
+#   thomasloven/lovelace-card-mod
+#   custom-cards/stack-in-card
+#   kalkih/mini-graph-card
+#
+# Layout: 3 colonne, pensato per stare in una schermata senza scroll.
+##############################################################################
+
+views:
+  ##########################################################################
+  # VISTA 1 - TUTTO IN UNA SCHERMATA
+  ##########################################################################
+  - title: Stampante
+    path: stampante
+    icon: mdi:printer-3d
+    type: sections
+    max_columns: 3
+    dense_section_placement: true
+    theme: bambu_dark
+    sections:
+
+      # ============ COLONNA 1: AMS 1 ============
+      - type: grid
+        cards:
+
+          # ---- AMS 1 (in cima) ----
+          - type: custom:stack-in-card
+            mode: vertical
+            card_mod:
+              style: |
+                ha-card { border-radius: 18px; }
+            cards:
+              - type: custom:mushroom-template-card
+                primary: AMS 1
+                secondary: >-
+                  {{ states('sensor.MY_AMS1_temperature') }}°C ·
+                  umidita {{ states('sensor.MY_AMS1_humidity_index') }}
+                icon: mdi:tray-full
+                icon_color: blue
+                card_mod:
+                  style: |
+                    ha-card { border: none; --card-primary-font-size: 14px; }
+              # 2 colonne invece di 4: ogni slot ha il doppio di larghezza
+              # e il nome del filamento non viene troncato.
+              - type: grid
+                columns: 2
+                square: false
+                cards:
+                  - &slot
+                    type: custom:mushroom-template-card
+                    entity: sensor.MY_AMS1_tray_1
+                    primary: "{{ states(config.entity) }}"
+                    secondary: >-
+                      {%- set r = state_attr(config.entity,'remain') -%}
+                      {%- set n = state_attr(config.entity,'nozzle_temp_min') -%}
+                      {%- set x = state_attr(config.entity,'nozzle_temp_max') -%}
+                      {%- if r is not none %}{{ r }}%{% endif -%}
+                      {%- if n is not none and x is not none %} · {{ n }}-{{ x }}°C{% endif -%}
+                    icon: mdi:printer-3d-nozzle
+                    multiline_secondary: true
+                    tap_action:
+                      action: more-info
+                    card_mod:
+                      style: |
+                        ha-card {
+                          border: none;
+                          padding: 4px 0;
+                          --card-primary-font-size: 12px;
+                          --card-secondary-font-size: 11px;
+                          --icon-size: 40px;
+                          --card-mod-icon-color:
+                            {{ '#' ~ (state_attr(config.entity,'color') or '9e9e9e')
+                               | replace('#','') | truncate(6, true, '') }};
+                        }
+                        ha-state-icon {
+                          filter: drop-shadow(0 0 1px var(--primary-text-color));
+                        }
+                  - <<: *slot
+                    entity: sensor.MY_AMS1_tray_2
+                  - <<: *slot
+                    entity: sensor.MY_AMS1_tray_3
+                  - <<: *slot
+                    entity: sensor.MY_AMS1_tray_4
+
+          - type: entities
+            title: Dettagli lavoro
+            state_color: true
+            card_mod:
+              style: |
+                ha-card { border-radius: 18px; }
+            entities:
+              - entity: sensor.MY_PRINTER_start_time
+                name: Inizio
+              - entity: sensor.MY_PRINTER_print_weight
+                name: Peso
+              - entity: sensor.MY_PRINTER_print_length
+                name: Filamento
+              - entity: sensor.MY_PRINTER_print_bed_type
+                name: Piatto
+                icon: mdi:layers
+              - entity: sensor.MY_PRINTER_nozzle_type
+                name: Nozzle
+                icon: mdi:printer-3d-nozzle
+              - entity: sensor.MY_PRINTER_nozzle_size
+                name: Diametro
+                icon: mdi:diameter-variant
+              - entity: sensor.MY_PRINTER_total_usage
+                name: Ore totali
+              - type: divider
+              - entity: sensor.MY_SERIAL_externalspool_external_spool
+                name: Bobina esterna 1
+                icon: mdi:printer-3d-nozzle-outline
+              - entity: sensor.MY_SERIAL_externalspool2_external_spool
+                name: Bobina esterna 2
+                icon: mdi:printer-3d-nozzle-outline
+
+          - type: custom:mini-graph-card
+            name: Temperature
+            hours_to_show: 6
+            points_per_hour: 30
+            line_width: 2
+            animate: true
+            height: 120
+            card_mod:
+              style: |
+                ha-card { border-radius: 18px; }
+            entities:
+              - entity: sensor.MY_PRINTER_left_nozzle_temperature
+                name: Nozzle SX
+                color: "#ff5252"
+              - entity: sensor.MY_PRINTER_right_nozzle_temperature
+                name: Nozzle DX
+                color: "#ff9800"
+              - entity: sensor.MY_PRINTER_bed_temperature
+                name: Piatto
+                color: "#ffc107"
+              - entity: sensor.MY_PRINTER_chamber_temperature
+                name: Camera
+                color: "#4caf50"
+
+      # ============ COLONNA 2: CAMERA + STATO ============
+      - type: grid
+        cards:
+          - type: custom:stack-in-card
+            mode: vertical
+            card_mod:
+              style: |
+                ha-card { border-radius: 18px; overflow: hidden; }
+            cards:
+              - type: conditional
+                conditions:
+                  - condition: state
+                    entity: camera.MY_PRINTER_camera
+                    state_not: unavailable
+                card:
+                  type: picture-entity
+                  entity: camera.MY_PRINTER_camera
+                  camera_view: live
+                  show_state: false
+                  show_name: false
+                  card_mod:
+                    style: |
+                      ha-card { border: none; border-radius: 0; }
+              - type: custom:mushroom-light-card
+                entity: light.MY_PRINTER_chamber_light
+                name: Luce camera
+                icon: mdi:led-on
+                show_brightness_control: true
+                use_light_color: false
+                card_mod:
+                  style: |
+                    ha-card { border: none; border-radius: 0; }
+
+          # ---- Riga di stato compatta ----
+          - type: custom:mushroom-chips-card
+            alignment: justify
+            chips:
+              - type: entity
+                entity: sensor.MY_PRINTER_active_tray
+                icon: mdi:tray-arrow-down
+                icon_color: blue
+              - type: entity
+                entity: sensor.MY_PRINTER_nozzle_size
+                icon: mdi:diameter-variant
+                icon_color: grey
+              - type: entity
+                entity: sensor.MY_PRINTER_wi_fi_signal
+                icon: mdi:wifi
+                icon_color: green
+              - type: entity
+                entity: binary_sensor.MY_PRINTER_hms_errors
+                icon: mdi:alert-circle
+                icon_color: red
+
+          # ---- Stato + anteprima + avanzamento + temp + ventole ----
+          - type: custom:stack-in-card
+            mode: vertical
+            card_mod:
+              style: |
+                ha-card { border-radius: 18px; overflow: hidden; }
+            cards:
+
+              - type: custom:mushroom-template-card
+                primary: >-
+                  {{ states('sensor.MY_PRINTER_task_name') if
+                     states('sensor.MY_PRINTER_task_name') not in
+                     ['unknown','unavailable','none',''] else 'Nessun lavoro' }}
+                secondary: >-
+                  {{ states('sensor.MY_PRINTER_print_status') }} ·
+                  {{ states('sensor.MY_PRINTER_current_stage') }}
+                icon: mdi:printer-3d
+                icon_color: >-
+                  {% set s = states('sensor.MY_PRINTER_print_status') %}
+                  {{ 'green' if s in ['printing','running'] else
+                     'orange' if s in ['pause','paused'] else
+                     'red' if s in ['failed','error'] else 'grey' }}
+                card_mod:
+                  style: |
+                    ha-card { border: none; }
+
+              # Anteprima del lavoro: richiede "Store Sent Files on External
+              # Storage" abilitato sulla stampante + chiavetta USB/SD.
+              # Togli i # per riattivarla.
+              #
+              # - type: conditional
+              #   conditions:
+              #     - condition: state
+              #       entity: image.MY_PRINTER_cover_image
+              #       state_not: unavailable
+              #   card:
+              #     type: picture-entity
+              #     entity: image.MY_PRINTER_cover_image
+              #     show_state: false
+              #     show_name: false
+              #     camera_view: auto
+              #     fit_mode: contain
+              #     card_mod:
+              #       style: |
+              #         ha-card { border: none; border-radius: 0; }
+              #         hui-image { max-height: 120px; display: block; }
+
+              # Barra avanzamento
+              - type: custom:mushroom-template-card
+                primary: >-
+                  {{ states('sensor.MY_PRINTER_print_progress') }}% ·
+                  layer {{ states('sensor.MY_PRINTER_current_layer') }}/{{
+                  states('sensor.MY_PRINTER_total_layer_count') }}
+                # NB: a seconda di modello/firmware, remaining_time puo'
+                # essere in minuti OPPURE in ore (bug noto dell'integrazione).
+                # Qui l'unita' viene letta dall'attributo, cosi' funziona
+                # in entrambi i casi.
+                secondary: >-
+                  {%- set e = 'sensor.MY_PRINTER_remaining_time' -%}
+                  {%- set v = states(e) | float(0) -%}
+                  {%- set u = state_attr(e, 'unit_of_measurement') | string | lower -%}
+                  {%- set m = (v * 60) if u in ['h','hr','hrs','hour','hours'] else
+                              (v / 60) if u in ['s','sec','seconds'] else v -%}
+                  {%- set m = m | round(0) | int -%}
+                  mancano {{ (m // 60) }}h {{ '%02d' % (m % 60) }}m ·
+                  fine {{ as_timestamp(states('sensor.MY_PRINTER_end_time'), 0)
+                          | timestamp_custom('%H:%M', true, '--:--') }}
+                icon: mdi:printer-3d-nozzle
+                icon_color: blue
+                card_mod:
+                  style: |
+                    ha-card {
+                      border: none;
+                      border-radius: 0;
+                      background: linear-gradient(
+                        to right,
+                        rgba(3,169,244,.55) {{ states('sensor.MY_PRINTER_print_progress') }}%,
+                        var(--card-background-color) {{ states('sensor.MY_PRINTER_print_progress') }}%
+                      );
+                    }
+
+              # Temperature
+              - type: grid
+                columns: 2
+                square: false
+                cards:
+                  - type: tile
+                    entity: sensor.MY_PRINTER_left_nozzle_temperature
+                    name: Nozzle SX
+                    icon: mdi:printer-3d-nozzle-heat
+                    color: red
+                    vertical: true
+                  - type: tile
+                    entity: sensor.MY_PRINTER_right_nozzle_temperature
+                    name: Nozzle DX
+                    icon: mdi:printer-3d-nozzle-heat
+                    color: deep-orange
+                    vertical: true
+                  - type: tile
+                    entity: sensor.MY_PRINTER_bed_temperature
+                    name: Piatto
+                    icon: mdi:radiator
+                    color: orange
+                    vertical: true
+                  - type: tile
+                    entity: sensor.MY_PRINTER_chamber_temperature
+                    name: Camera
+                    icon: mdi:home-thermometer
+                    color: amber
+                    vertical: true
+
+              # Ventole + velocita
+              - type: grid
+                columns: 2
+                square: false
+                cards:
+                  - type: tile
+                    entity: sensor.MY_PRINTER_cooling_fan_speed
+                    name: Vent. parti
+                    icon: mdi:fan
+                    color: cyan
+                    vertical: true
+                  - type: tile
+                    entity: sensor.MY_PRINTER_aux_fan_speed
+                    name: Vent. aux
+                    icon: mdi:fan-auto
+                    color: cyan
+                    vertical: true
+                  - type: tile
+                    entity: sensor.MY_PRINTER_chamber_fan_speed
+                    name: Vent. camera
+                    icon: mdi:fan-chevron-up
+                    color: cyan
+                    vertical: true
+                  - type: tile
+                    entity: sensor.MY_PRINTER_speed_profile
+                    name: Velocita
+                    icon: mdi:speedometer
+                    color: green
+                    vertical: true
+
+      # ============ COLONNA 3: AMS 2 + STATO ============
+      - type: grid
+        cards:
+
+          # ---- AMS 2 ----
+          - type: custom:stack-in-card
+            mode: vertical
+            card_mod:
+              style: |
+                ha-card { border-radius: 18px; }
+            cards:
+              - type: custom:mushroom-template-card
+                primary: AMS 2
+                secondary: >-
+                  {{ states('sensor.MY_AMS2_temperature') }}°C ·
+                  umidita {{ states('sensor.MY_AMS2_humidity_index') }}
+                icon: mdi:tray-full
+                icon_color: purple
+                card_mod:
+                  style: |
+                    ha-card { border: none; --card-primary-font-size: 14px; }
+              - type: grid
+                columns: 2
+                square: false
+                cards:
+                  - <<: *slot
+                    entity: sensor.MY_AMS2_tray_1
+                  - <<: *slot
+                    entity: sensor.MY_AMS2_tray_2
+                  - <<: *slot
+                    entity: sensor.MY_AMS2_tray_3
+                  - <<: *slot
+                    entity: sensor.MY_AMS2_tray_4
+
+          - type: entities
+            title: Stato sistema
+            state_color: true
+            card_mod:
+              style: |
+                ha-card { border-radius: 18px; }
+            entities:
+              - entity: binary_sensor.MY_PRINTER_hms_errors
+                name: Errori HMS
+              - entity: binary_sensor.MY_PRINTER_print_error
+                name: Errore di stampa
+              - entity: binary_sensor.MY_PRINTER_door
+                name: Sportello
+              - entity: binary_sensor.MY_PRINTER_online
+                name: Online
+              - type: divider
+              - entity: binary_sensor.MY_SERIAL_externalspool_active
+                name: Bobina esterna 1 attiva
+              - entity: binary_sensor.MY_SERIAL_externalspool2_active
+                name: Bobina esterna 2 attiva
+
+          - type: history-graph
+            title: Storico stato 24h
+            hours_to_show: 24
+            card_mod:
+              style: |
+                ha-card { border-radius: 18px; }
+            entities:
+              - entity: sensor.MY_PRINTER_print_status
+                name: Stato
+              - entity: sensor.MY_PRINTER_current_stage
+                name: Fase
