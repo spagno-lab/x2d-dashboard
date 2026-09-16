@@ -232,26 +232,29 @@ views:
                   style: |
                     ha-card { border: none; }
 
-              # Anteprima del lavoro: richiede "Store Sent Files on External
-              # Storage" abilitato sulla stampante + chiavetta USB/SD.
-              # Togli i # per riattivarla.
-              #
-              # - type: conditional
-              #   conditions:
-              #     - condition: state
-              #       entity: image.MY_PRINTER_cover_image
-              #       state_not: unavailable
-              #   card:
-              #     type: picture-entity
-              #     entity: image.MY_PRINTER_cover_image
-              #     show_state: false
-              #     show_name: false
-              #     camera_view: auto
-              #     fit_mode: contain
-              #     card_mod:
-              #       style: |
-              #         ha-card { border: none; border-radius: 0; }
-              #         hui-image { max-height: 120px; display: block; }
+              # Anteprima del lavoro. Funziona anche senza USB: l'immagine
+              # arriva da /api/image_proxy. Sfondo bianco forzato perche'
+              # il JPEG ha fondo bianco e su tema scuro stonerebbe.
+              - type: conditional
+                conditions:
+                  - condition: state
+                    entity: image.MY_PRINTER_cover_image
+                    state_not: unavailable
+                card:
+                  type: picture-entity
+                  entity: image.MY_PRINTER_cover_image
+                  show_state: false
+                  show_name: false
+                  camera_view: auto
+                  fit_mode: contain
+                  card_mod:
+                    style: |
+                      ha-card {
+                        border: none;
+                        border-radius: 0;
+                        background: #ffffff;
+                      }
+                      hui-image { max-height: 150px; display: block; }
 
               # Barra avanzamento
               - type: custom:mushroom-template-card
